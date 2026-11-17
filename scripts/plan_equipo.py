@@ -111,8 +111,8 @@ cards = ''
 for i in EQ:
     p = por[i]
     cards += (f'<div class="pc"><h3>{e(quien(i))}</h3><b class="big">{p["sem"]}</b> <small>actividades esta semana</small>'
-              f'<p class="s">{len(p["ab"])} negocios abiertos · {len(p["sin"])} sin próxima actividad ({e(cuenta(p["sin"]))}).</p>')
-    if p['sin']: cards += '<p class="s">Primeros a agendar: ' + '; '.join(e(x['title']) for x in p['sin'][:6]) + '.</p>'
+              f'<p class="s">{len(p["ab"])} negocios abiertos · {len(p["sin"])} sin actividad agendada de acá en adelante ({e(cuenta(p["sin"]))}). Las vencidas no cuentan.</p>')
+    if p['sin']: cards += '<p class="s">Primeros a agendar (mayor valor primero): ' + '; '.join(e(x['title']) for x in p['sin'][:6]) + '.</p>'
     if i == RL: cards += f'<p class="s">Leads: {len(leads)} asignados · {len(lsin)} sin próxima actividad.</p>'
     cards += '</div>'
 
