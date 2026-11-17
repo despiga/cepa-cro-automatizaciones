@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """Dashboard comercial de una base con varios vendedores (p. ej. Cono Sur).
-Uso: python3 -I dashboard_equipo.py config.json ABIERTOS GANADOS PERDIDOS HECHAS PENDIENTES salida.html AAAA-MM-DD [fx.json]
+Uso: python3 -I dashboard_equipo.py config.json ABIERTOS GANADOS PERDIDOS HECHAS PENDIENTES salida.html AAAA-MM-DD [fx.json] [previo.json]
 Cada argumento de datos es una ruta o varias separadas por coma (páginas de Pipedrive)."""
 import os, sys, collections, datetime as dt
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from html import escape as e
-from common import cargar_config, cargar_lista, cargar_fx, fx_texto, fm, dd, DM, parse_ts as P
+from common import cargar_config, cargar_lista, cargar_fx, fx_texto, fm, dd, DM, parse_ts as P, bloque_metricas, cargar_previo, texto_cambios
+from estilos import css, cabecera
 
 C = cargar_config(sys.argv[1])
 op, won, lost, hechas, pend = [cargar_lista(f) for f in sys.argv[2:7]]
 OUT = sys.argv[7]
 TODAY = sys.argv[8] if len(sys.argv) > 8 else dt.date.today().isoformat()
 FX, FXI = cargar_fx(sys.argv[9] if len(sys.argv) > 9 else None, C['fx_respaldo'])
+PREVIO = cargar_previo(sys.argv[10] if len(sys.argv) > 10 else None)
 Y = TODAY[:4]
 usd = lambda x: (x['value'] or 0) / FX.get(x['currency'], 1)
 NAMES = {int(k): v for k, v in C['vendedores'].items()}; V = list(NAMES.values())
@@ -87,43 +89,25 @@ pmore = ' (primera página del filtro, puede haber más)' if len(pend) >= 500 el
 hechtxt = f'{len(hy)} actividades hechas en {Y}' + (f', la última el {DM(last)}' if last else '') + '. ' + ('Muy poco registro: no se puede medir ritmo comercial semanal.' if len(hy) < 40 else 'Ver ritmo mensual en Pipedrive.')
 semana = sum(1 for x in hechas if x['due_date'] and (now.date() - dt.date.fromisoformat(x['due_date'])).days <= 7 and x['due_date'] <= TODAY)
 fxfoot = fx_texto({x['currency'] for x in op + won + lost} | set(FXI), FX, FXI, TODAY)
-html = f'''<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>{e(C["titulo"])}</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-<style>
-:root{{--bg:#F3F5F7;--card:#FFFFFF;--ink:#1B2630;--mut:#5B6670;--line:#DDE3E8;--navy:#17324D;--acc:#B4531A;--warnbg:#FDF1E7;--v1:#1F5F8B;--v2:#B4531A;--v3:#4F8A5B;--v4:#7A4E9C;--v5:#9C7A1F;--trk:#E7ECF0;--hf:'Space Grotesk',Arial,sans-serif;--bf:'Inter',Arial,sans-serif}}
-@media (prefers-color-scheme:dark){{:root:not([data-theme="light"]){{--bg:#0F1A24;--card:#16232F;--ink:#E6ECF1;--mut:#9AA8B4;--line:#2A3A48;--navy:#9CC3E6;--acc:#E39358;--warnbg:#2A1E15;--v1:#6AAEDC;--v2:#E39358;--v3:#7DBB89;--v4:#B994D6;--v5:#D9B95C;--trk:#22323F;color-scheme:dark}}}}
-:root[data-theme="dark"]{{--bg:#0F1A24;--card:#16232F;--ink:#E6ECF1;--mut:#9AA8B4;--line:#2A3A48;--navy:#9CC3E6;--acc:#E39358;--warnbg:#2A1E15;--v1:#6AAEDC;--v2:#E39358;--v3:#7DBB89;--v4:#B994D6;--v5:#D9B95C;--trk:#22323F;color-scheme:dark}}
-body{{background:var(--bg);color:var(--ink);font:14px/1.5 var(--bf);padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
-.wrap{{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:18px}}
-h1{{font:700 28px/1.15 var(--hf);color:var(--navy);margin:0;text-wrap:balance}}
-h2{{font:700 17px var(--hf);color:var(--navy);margin:0 0 4px}}
-.sub{{color:var(--mut);margin:4px 0 0}}
-.card{{background:var(--card);border:1px solid var(--line);padding:18px 20px;min-width:0}}
-.note{{background:var(--warnbg);border-left:3px solid var(--acc);padding:12px 16px}}.note b{{color:var(--acc)}}
-.kpis{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}}
-.kpi{{background:var(--card);border:1px solid var(--line);padding:14px 16px}}
-.kpi small{{color:var(--mut);display:block}}
-.kpi b{{font:700 26px var(--hf);color:var(--navy);display:block;font-variant-numeric:tabular-nums}}
-.kpi span{{color:var(--mut);font-size:12px}}
-.frow{{display:grid;grid-template-columns:150px 1fr 110px;gap:12px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}}
-.flab span{{color:var(--mut);margin-left:6px;font-size:12px}}
-.fbar{{display:flex;background:var(--trk);height:22px;min-width:0}}.seg{{display:block;height:100%}}
-.fnum{{text-align:right;font-variant-numeric:tabular-nums}}.fnum span{{display:block;color:var(--mut);font-size:12px}}
-.legend{{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 0;color:var(--mut);font-size:13px}}
-.lg i{{display:inline-block;width:10px;height:10px;margin-right:6px}}
-.tw{{overflow-x:auto}}table{{border-collapse:collapse;width:100%;min-width:520px}}
-th{{text-align:left;font:600 12px var(--bf);color:var(--mut);letter-spacing:.04em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line)}}
-td{{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}}
-.num{{text-align:right;font-variant-numeric:tabular-nums}}th.num{{text-align:right}}
-.mini{{background:var(--trk);height:8px;width:140px}}.mini span{{display:block;height:100%;background:var(--acc)}}
-small{{color:var(--mut)}}ul{{margin:6px 0 0;padding-left:20px}}li{{margin:0 0 4px}}
-.foot{{color:var(--mut);font-size:12px}}
-@media (max-width:520px){{.frow{{grid-template-columns:1fr;gap:4px}}.fnum{{text-align:left}}}}
-</style></head><body>
+CSS = css(960, '18px 20px', 520, extra=(
+    '.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}\n'
+    '.kpi{background:var(--card);border:1px solid var(--line);padding:14px 16px}.kpi small{color:var(--mut);display:block}\n'
+    '.kpi b{font:700 26px var(--hf);color:var(--navy);display:block;font-variant-numeric:tabular-nums}.kpi span{color:var(--mut);font-size:12px}\n'
+    '.frow{display:grid;grid-template-columns:150px 1fr 110px;gap:12px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}\n'
+    '.flab span{color:var(--mut);margin-left:6px;font-size:12px}\n'
+    '.fbar{display:flex;background:var(--trk);height:22px;min-width:0}.seg{display:block;height:100%}\n'
+    '.fnum{text-align:right;font-variant-numeric:tabular-nums}.fnum span{display:block;color:var(--mut);font-size:12px}\n'
+    '.legend{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 0;color:var(--mut);font-size:13px}\n'
+    '.lg i{display:inline-block;width:10px;height:10px;margin-right:6px}\n'
+    '.mini{background:var(--trk);height:8px;width:140px}.mini span{display:block;height:100%;background:var(--acc)}\n'
+    '@media (max-width:520px){.frow{grid-template-columns:1fr;gap:4px}.fnum{text-align:left}}\n'))
+METR = {'fecha': TODAY, 'abiertos': nop, 'con_valor': conv, 'usd': tusd, 'ponderado': pond, 'ganados_anio': len(wy), 'usd_ganado': wtot, 'estancados': len(est)}
+cambios = texto_cambios(PREVIO, METR, [('abiertos', 'abiertos'), ('con_valor', 'con valor'), ('usd', 'pipeline USD'), ('ponderado', 'ponderado USD'), ('ganados_anio', 'ganados en el año'), ('usd_ganado', 'USD ganado'), ('estancados', 'estancados')])
+html = cabecera(C["titulo"]) + f'''<style>{CSS}</style>{bloque_metricas(METR)}</head><body>
 <div class="wrap">
 <header><h1>{e(C["titulo"])}</h1><p class="sub">{e(C["subtitulo"])} · {e(", ".join(V))} · datos de Pipedrive al {DM(TODAY)}</p></header>
 <div class="note"><b>Leer con cuidado.</b> Solo {conv} de {nop} negocios abiertos tienen valor cargado, así que el pipeline en dólares es un piso, no el total. {nota_mon}Aún no hay metas cargadas, por eso no hay barras de cumplimiento.</div>
+{f'<div class="delta">{cambios}</div>' if cambios else ''}
 <section class="kpis">
 <div class="kpi"><small>Pipeline abierto (USD)</small><b>{fm(tusd)}</b><span>solo negocios con valor ({conv} de {nop})</span></div>
 <div class="kpi"><small>Ponderado por etapa (USD)</small><b>{fm(pond)}</b><span>valor × probabilidad de la etapa</span></div>

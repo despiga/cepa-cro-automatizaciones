@@ -6,6 +6,7 @@ from collections import Counter
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from html import escape as e
 from common import cargar_config, cargar_lista, fm
+from estilos import css, cabecera
 
 C = cargar_config(sys.argv[1])
 deals, pend, hechas, leads, orgs = [cargar_lista(f) for f in sys.argv[2:7]]
@@ -105,25 +106,14 @@ gp = ''
 if gan or per:
     gp = '<section class="card"><h2>Semana pasada</h2><ul>' + ''.join(f'<li>Ganado: <a href="{URL}/deal/{x["id"]}">{e(x["title"])}</a> ({fmt(D(x["won_time"][:10]))})</li>' for x in gan) + ''.join(f'<li>Perdido: {e(x["title"])} ({fmt(D(x["lost_time"][:10]))}) · {e(x.get("lost_reason") or "sin motivo")}</li>' for x in per) + '</ul></section>'
 comp = ''.join(f'<tr><td>{e(p)}</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>' for p in C.get('filas_compromisos', [VEND] * 5))
-CSS = ''':root{--bg:#F3F5F7;--card:#FFFFFF;--ink:#1B2630;--mut:#5B6670;--line:#DDE3E8;--navy:#17324D;--acc:#B4531A;--warnbg:#FDF1E7;--hf:'Space Grotesk',Arial,sans-serif;--bf:'Inter',Arial,sans-serif}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1A24;--card:#16232F;--ink:#E6ECF1;--mut:#9AA8B4;--line:#2A3A48;--navy:#9CC3E6;--acc:#E39358;--warnbg:#2A1E15;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0F1A24;--card:#16232F;--ink:#E6ECF1;--mut:#9AA8B4;--line:#2A3A48;--navy:#9CC3E6;--acc:#E39358;--warnbg:#2A1E15;color-scheme:dark}
-body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--bf);padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
-h1{font:700 28px/1.15 var(--hf);color:var(--navy);margin:0;text-wrap:balance}h2{font:700 17px var(--hf);color:var(--navy);margin:0 0 6px}h3{font:700 15px var(--hf);color:var(--navy);margin:0 0 4px}
-.sub{color:var(--mut);margin:4px 0 0}.card{background:var(--card);border:1px solid var(--line);padding:16px 20px;min-width:0}
-.note{background:var(--warnbg);border-left:3px solid var(--acc);padding:12px 16px}.note b{color:var(--acc)}
-.team{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}.pc{background:var(--card);border:1px solid var(--line);padding:14px 16px}
-.big{font:700 28px var(--hf);color:var(--navy)}.s{font-size:13px;color:var(--mut);margin:6px 0 0}
-.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:620px}
-th{text-align:left;font:600 12px var(--bf);color:var(--mut);letter-spacing:.04em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line)}
-td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}td a{color:var(--navy)}.warn{color:var(--acc)}small{color:var(--mut)}.foot{color:var(--mut);font-size:12px}ul{margin:6px 0 0;padding-left:20px}'''
+CSS = css(1000, '16px 20px', 620, extra=(
+    '.team{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}.pc{background:var(--card);border:1px solid var(--line);padding:14px 16px}\n'
+    '.big{font:700 28px var(--hf);color:var(--navy)}.s{font-size:13px;color:var(--mut);margin:6px 0 0}\n'))
+TITULO = C.get('titulo_plan', C['titulo'])
 rango = f'{MON.day} al {FRI.day} de {MESES[FRI.month-1]} de {FRI.year}' if MON.month == FRI.month else f'{MON.day} de {MESES[MON.month-1]} al {FRI.day} de {MESES[FRI.month-1]} de {FRI.year}'
-out = f'''<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>{e(C["titulo"])}</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+out = cabecera(TITULO) + f'''
 <style>{CSS}</style></head><body><div class="wrap">
-<header><h1>{e(C["titulo"])}</h1><p class="sub">Semana del {rango} · para la reunión de seguimiento con {e(VEND)} del lunes {fmt(MON)} · datos de Pipedrive al {TODAY.strftime('%d/%m/%Y')}</p></header>
+<header><h1>{e(TITULO)}</h1><p class="sub">Semana del {rango} · para la reunión de seguimiento con {e(VEND)} del lunes {fmt(MON)} · datos de Pipedrive al {TODAY.strftime('%d/%m/%Y')}</p></header>
 <div class="note"><b>Para decidir hoy.</b> {' '.join(partes)}</div>
 {cards}
 {gp}
@@ -132,7 +122,7 @@ out = f'''<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name=
 <section class="card"><h2>Próximas semanas <small>· ya agendado</small></h2><div class="tw"><table><thead><tr><th>Fecha</th>{TH}</tr></thead><tbody>{prows}</tbody></table></div>{f'<p class="foot">Se muestran las primeras 25 de {len(prox)}.</p>' if len(prox) > 25 else ''}</section>
 <section class="card"><h2>Vencidas recientes a resolver <small>· últimos 90 días</small></h2><div class="tw"><table><thead><tr><th>Vencía</th>{TH}</tr></thead><tbody>{vrows}</tbody></table></div>{f'<p class="foot">Hay además {viejas} actividades pendientes vencidas hace más de 90 días que conviene cerrar en bloque.</p>' if viejas else ''}</section>
 <section class="card"><h2>Compromisos de la semana <small>· completar en la reunión</small></h2><div class="tw"><table><thead><tr><th>Responsable</th><th>Compromiso</th><th>Negocio</th><th>Fecha</th></tr></thead><tbody>{comp}</tbody></table></div></section>
-<p class="foot">{e(C["fuente_texto"])}</p>
+<p class="foot">{e(C.get("fuente_plan", C["fuente_texto"]))}</p>
 </div></body></html>'''
 open(OUT, 'w', encoding='utf-8').write(out)
 print('ok', len(out), 'semana', len(semana), 'vencidas90', len(rec90), 'viejas', viejas, 'prox', len(prox), 'abiertos', len(op), 'leads', len(leads))

@@ -69,3 +69,40 @@ def fx_texto(monedas, FX, FXI, hoy):
 
 def parse_ts(s):
     return dt.datetime.fromisoformat(s.replace('Z', '+00:00'))
+
+
+# --- Comparación con la corrida anterior -------------------------------------------------
+# Cada dashboard embebe sus métricas en un bloque JSON dentro del HTML publicado.
+# La corrida siguiente copia ese JSON a previo.json y el script muestra los cambios.
+
+def bloque_metricas(m):
+    """Bloque <script type="application/json" id="metricas"> para embeber en el HTML."""
+    return '<script type="application/json" id="metricas">' + json.dumps(m, ensure_ascii=False) + '</script>'
+
+
+def cargar_previo(ruta):
+    """Lee previo.json; devuelve {} si no existe, está vacío o es inválido."""
+    if not ruta:
+        return {}
+    try:
+        with open(ruta, encoding='utf-8') as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def texto_cambios(previo, actual, etiquetas):
+    """'Desde el dd/mm/aaaa: abiertos 20 → 22 · con valor 0 → 5 …' (solo lo que cambió)."""
+    if not previo or not previo.get('fecha'):
+        return ''
+    partes = []
+    for clave, etiqueta in etiquetas:
+        a, b = previo.get(clave), actual.get(clave)
+        if a is None or b is None or a == b:
+            continue
+        partes.append(f'{etiqueta} {fm(a)} → <b>{fm(b)}</b>')
+    desde = DM(str(previo['fecha']))
+    if not partes:
+        return f'Sin cambios en las cifras principales desde el {desde}.'
+    return f'Cambios desde el {desde}: ' + ' · '.join(partes) + '.'
