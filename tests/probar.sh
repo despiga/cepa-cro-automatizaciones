@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Prueba de humo: genera datos ficticios, corre los tres reportes y la plantilla del briefing, y verifica la salida.
+set -euo pipefail
+R="$(cd "$(dirname "$0")/.." && pwd)"; T="$(mktemp -d)"; HOY="${1:-$(date +%F)}"
+python3 -I "$R/tests/generar_datos.py" "$T" "$HOY"
+python3 -I "$R/scripts/dashboard_equipo.py" "$R/tests/config_equipo.json" $T/eq_abiertos.json $T/eq_ganados.json $T/eq_perdidos.json $T/eq_hechas.json $T/eq_pend.json $T/a.html "$HOY" $T/fx.json
+python3 -I "$R/scripts/dashboard_equipo.py" "$R/tests/config_equipo.json" $T/eq_abiertos.json $T/eq_ganados.json $T/eq_perdidos.json $T/eq_hechas.json $T/eq_pend.json $T/a2.html "$HOY"
+python3 -I "$R/scripts/dashboard_vendedor.py" "$R/tests/config_vendedor.json" $T/v_deals.json $T/v_hechas.json $T/v_pend.json $T/v_leads.json $T/b.html "$HOY" $T/fx.json
+python3 -I "$R/scripts/plan_vendedor.py" "$R/tests/config_vendedor.json" $T/v_deals.json $T/v_pend.json $T/v_hechas.json $T/v_leads.json $T/v_orgs.json $T/c.html "$HOY"
+python3 -I -c "import sys; sys.path.insert(0,'$R/scripts'); from briefing_template import render
+d=dict(asunto='A',region='Región',vendedor='V',fecha='Hoy',agenda=[dict(hora='10:00',actividad='X',cliente='C',tipo='Llamada',url='u')],fichas=[dict(titulo='T',subtitulo='S',datos=[('Valor','1')],resumen='r',linea=[('01/01/2026','x')],compromisos=[],alertas=['a'],preguntas=['p'])],leads=[],leads_vacio='Sin leads.',calidad=['q'],pie='pie')
+open('$T/d.html','w').write(render(d))"
+for f in a a2 b c d; do python3 -I "$R/scripts/verificar.py" $T/$f.html; done
+echo "TODO OK ($T)"
