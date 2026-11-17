@@ -20,6 +20,7 @@ Si un script falla, la tarea **no lo modifica**: no publica y avisa el error.
 |---|---|---|
 | `scripts/dashboard_equipo.py` | Dashboard de una base con varios vendedores | `config.json ABIERTOS GANADOS PERDIDOS HECHAS PENDIENTES salida.html AAAA-MM-DD [fx.json] [previo.json]` |
 | `scripts/dashboard_vendedor.py` | Dashboard de una base con un vendedor y leads etiquetados | `config.json DEALS HECHAS PENDIENTES LEADS salida.html AAAA-MM-DD [fx.json] [previo.json]` |
+| `scripts/plan_equipo.py` | Plan semanal de una base con varios vendedores | `config.json ABIERTOS GANADOS PERDIDOS PENDIENTES LEADS salida.html AAAA-MM-DD [fx.json]` |
 | `scripts/plan_vendedor.py` | Plan semanal de un vendedor | `config.json DEALS PENDIENTES HECHAS LEADS ORGS salida.html AAAA-MM-DD` |
 | `scripts/briefing_template.py` | Plantilla HTML fija del briefing diario por mail | `from briefing_template import render` |
 | `scripts/verificar.py` | Control de calidad del HTML (sin None/NaN/undefined) | `salida.html` |
@@ -27,6 +28,8 @@ Si un script falla, la tarea **no lo modifica**: no publica y avisa el error.
 | `scripts/estilos.py` | CSS común (tokens claro/oscuro, tarjetas, tablas) | se importa |
 
 Cada argumento de datos acepta una ruta o varias separadas por coma (páginas de Pipedrive).
+
+`plan_equipo.py` usa el mismo config que `dashboard_equipo.py` más `nombres_cortos` (nombre de uso por id), `pipedrive_url`, `responsable_leads` (id de quien califica leads; opcional) y, si existen, `titulo_plan`, `subtitulo_plan`, `fuente_plan` y `filas_compromisos`.
 
 `plan_vendedor.py` usa el mismo config que `dashboard_vendedor.py`; si existen, toma `titulo_plan` y `fuente_plan`
 en lugar de `titulo` y `fuente_texto`. Así una sola tarea por base trae los datos una vez y genera los dos reportes.

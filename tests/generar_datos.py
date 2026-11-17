@@ -20,7 +20,10 @@ won = [deal(4, 1, status='won', val=200000, won_time=ts(-10))]
 lost = [deal(5, 2, status='lost', lost_time=ts(-5), lost_reason='Precio')]
 acts = [act(101, 1, d(0), deal_id=1), act(102, 2, d(-20)), act(103, 3, d(10))]
 hechas = [act(201, 1, d(-3), done=True)]
-for n, v in dict(eq_abiertos=op, eq_ganados=won, eq_perdidos=lost, eq_pend=acts, eq_hechas=hechas).items():
+acts += [act(104, 3, d(-40), lead_id='LE1'), act(105, 2, d(-400))]
+eq_leads = [dict(id='LE1', title='Lead del equipo', owner_id=3, is_archived=False, next_activity_id=104, was_seen=False, add_time=ts(-2), value=dict(amount=5000, currency='UYU')),
+            dict(id='LE2', title='Lead archivado', owner_id=3, is_archived=True)]
+for n, v in dict(eq_abiertos=op, eq_ganados=won, eq_perdidos=lost, eq_pend=acts, eq_hechas=hechas, eq_leads=eq_leads).items():
     json.dump({'data': v}, open(f'{out}/{n}.json', 'w'))
 # Vendedor único (owner 9)
 vd = [deal(11, 9, cur='COP', val=33000000, next_activity_id=301), deal(12, 9, cur='COP', val=0, stage=127),
